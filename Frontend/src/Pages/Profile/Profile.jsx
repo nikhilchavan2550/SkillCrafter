@@ -17,12 +17,13 @@ const Profile = () => {
   const [connectLoading, setConnectLoading] = useState(false);
   const navigate = useNavigate();
 
+  const skillColors = ["#3BB4A1", "#FF6B6B", "#FFD700", "#546E7A", "#A9DCE3"]; // Distinct colors for skills
+
   useEffect(() => {
     const getUser = async () => {
       setLoading(true);
       try {
         const { data } = await axios.get(`/user/registered/getDetails/${username}`);
-        console.log(data.data);
         setProfileUser(data.data);
       } catch (error) {
         console.log(error);
@@ -40,30 +41,25 @@ const Profile = () => {
       }
     };
     getUser();
-  }, []);
+  }, [username]);
 
   const convertDate = (dateTimeString) => {
     const date = new Date(dateTimeString);
-    const formattedDate = date.toLocaleDateString("en-US", { month: "2-digit", year: "numeric" }).replace("/", "-");
-    return formattedDate;
+    return date.toLocaleDateString("en-US", { month: "2-digit", year: "numeric" }).replace("/", "-");
   };
 
   const connectHandler = async () => {
-    console.log("Connect");
     try {
       setConnectLoading(true);
       const { data } = await axios.post(`/request/create`, {
         receiverID: profileUser._id,
       });
 
-      console.log(data);
       toast.success(data.message);
-      setProfileUser((prevState) => {
-        return {
-          ...prevState,
-          status: "Pending",
-        };
-      });
+      setProfileUser((prevState) => ({
+        ...prevState,
+        status: "Pending",
+      }));
     } catch (error) {
       console.log(error);
       if (error?.response?.data?.message) {
@@ -81,109 +77,110 @@ const Profile = () => {
   };
 
   return (
-    <div className="profile-container">
-      <div className="container" style={{ minHeight: "86vh" }}>
+    <div className="profile-container" style={{ backgroundColor: "#000", color: "#EAEAEA", minHeight: "100vh" }}>
+      <div className="container" style={{ padding: "20px" }}>
         {loading ? (
           <div className="row d-flex justify-content-center align-items-center" style={{ height: "50vh" }}>
             <Spinner animation="border" variant="primary" />
           </div>
         ) : (
           <>
-            <div className="profile-box">
-              <div className="left-div">
-                {/* Profile Photo */}
-                <div className="profile-photo">
-                  <img src={profileUser?.picture} alt="Profile" />
-                </div>
-                {/* Name */}
-                <div className="misc">
-                  <h1 className="profile-name" style={{ marginLeft: "2rem" }}>
-                    {profileUser?.name}
-                  </h1>
-                  {/* Rating */}
-                  <div className="rating" style={{ marginLeft: "2rem" }}>
-                    {/* Rating stars */}
-                    <span className="rating-stars">
-                      {profileUser?.rating
-                        ? Array.from({ length: profileUser.rating }, (_, index) => <span key={index}>⭐</span>)
-                        : "⭐⭐⭐⭐⭐"}
-                    </span>
-                    {/* Rating out of 5 */}
-                    <span className="rating-value">{profileUser?.rating ? profileUser?.rating : "5"}</span>
+            <div className="profile-box" style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+              <div>
+                <img
+                  src={profileUser?.picture}
+                  alt="Profile"
+                  style={{
+                    width: "150px",
+                    height: "150px",
+                    borderRadius: "50%",
+                    border: "2px solid #A9DCE3",
+                    marginBottom: "10px",
+                  }}
+                />
+                {user?.username !== username && (
+                  <div style={{ marginTop: "10px" }}>
+                    <button
+                      onClick={profileUser?.status === "Connect" ? connectHandler : undefined}
+                      style={{
+                        backgroundColor: profileUser?.status === "Connect" ? "#3BB4A1" : "#333",
+                        color: "#EAEAEA",
+                        border: "none",
+                        padding: "10px 20px",
+                        borderRadius: "5px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {connectLoading ? <Spinner animation="border" size="sm" /> : profileUser?.status}
+                    </button>
                   </div>
-                  {/* Connect and Report Buttons */}
-                  {
-                    // If the user is the same as the logged in user, don't show the connect and report buttons
-                    user?.username !== username && (
-                      <div className="buttons">
-                        <button
-                          className="connect-button"
-                          onClick={profileUser?.status === "Connect" ? connectHandler : undefined}
-                        >
-                          {connectLoading ? (
-                            <>
-                              <Spinner animation="border" variant="light" size="sm" style={{ marginRight: "0.5rem" }} />
-                            </>
-                          ) : (
-                            profileUser?.status
-                          )}
-                        </button>
-                        <Link to={`/report/${profileUser.username}`}>
-                          <button className="report-button">Report</button>
-                        </Link>
-                        <Link to={`/rating/${profileUser.username}`}>
-                          <button className="report-button bg-success">Rate</button>
-                        </Link>
-                      </div>
-                    )
-                  }
-                </div>
-              </div>
-              <div className="edit-links">
-                {user.username === username && (
-                  <Link to="/edit_profile">
-                    <button className="edit-button">Edit Profile ✎</button>
-                  </Link>
                 )}
+              </div>
 
-                {/* Portfolio Links */}
-                <div className="portfolio-links">
-                  <a
-                    href={profileUser?.githubLink ? profileUser.githubLink : "#"}
-                    target={profileUser?.githubLink ? "_blank" : "_self"}
-                    className="portfolio-link"
-                  >
-                    <img src="/assets/images/github.png" className="link" alt="Github" />
-                  </a>
-                  <a
-                    href={profileUser?.linkedinLink ? profileUser.linkedinLink : "#"}
-                    target={profileUser?.linkedinLink ? "_blank" : "_self"}
-                    className="portfolio-link"
-                  >
-                    <img src="/assets/images/linkedin.png" className="link" alt="LinkedIn" />
-                  </a>
-                  <a
-                    href={profileUser?.portfolioLink ? profileUser.portfolioLink : "#"}
-                    target={profileUser?.portfolioLink ? "_blank" : "_self"}
-                    className="portfolio-link"
-                  >
-                    <img src="/assets/images/link.png" className="link" alt="Portfolio" />
-                  </a>
+              <div>
+                <h1 style={{ fontSize: "2.5rem", fontFamily: "Oswald, sans-serif" }}>{profileUser?.name}</h1>
+                <p style={{ fontSize: "1.2rem", fontFamily: "Montserrat, sans-serif" }}>
+                  {profileUser?.bio || "No bio provided"}
+                </p>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                  <span style={{ fontSize: "1.2rem" }}>Rating: </span>
+                  <span style={{ color: "#FFD700" }}>
+                    {Array.from({ length: profileUser?.rating || 5 }).map((_, index) => (
+                      <span key={index}>⭐</span>
+                    ))}
+                  </span>
+                </div>
+                <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+                  {user?.username === username && (
+                    <Link to="/edit_profile">
+                      <button
+                        style={{
+                          backgroundColor: "#3BB4A1",
+                          color: "#000",
+                          border: "none",
+                          padding: "10px 20px",
+                          borderRadius: "5px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Edit Profile
+                      </button>
+                    </Link>
+                  )}
+                  <Link to={`/report/${username}`}>
+                    <button
+                      style={{
+                        backgroundColor: "#FF6B6B",
+                        color: "#fff",
+                        border: "none",
+                        padding: "10px 20px",
+                        borderRadius: "5px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Report
+                    </button>
+                  </Link>
                 </div>
               </div>
             </div>
 
-            {/* Bio */}
-            <h2>Bio</h2>
-            <p className="bio">{profileUser?.bio}</p>
-
             {/* Skills */}
-            <div className="skills">
-              <h2>Skills Proficient At</h2>
-              {/* Render skill boxes here */}
-              <div className="skill-boxes">
-                {profileUser?.skillsProficientAt.map((skill, index) => (
-                  <div className="skill-box" style={{ fontSize: "16px" }} key={index}>
+            <div style={{ marginTop: "20px" }}>
+              <h2 style={{ fontSize: "2rem", fontFamily: "Oswald, sans-serif", marginBottom: "10px" }}>Skills</h2>
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                {profileUser?.skillsProficientAt?.map((skill, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      backgroundColor: skillColors[index % skillColors.length],
+                      color: "#000",
+                      padding: "5px 10px",
+                      borderRadius: "5px",
+                      fontSize: "0.9rem",
+                      fontWeight: "bold",
+                    }}
+                  >
                     {skill}
                   </div>
                 ))}
@@ -191,49 +188,35 @@ const Profile = () => {
             </div>
 
             {/* Education */}
-            <div className="education">
-              <h2>Education</h2>
-
-              <div className="education-boxes">
-                {/* Render education boxes here */}
-                {profileUser &&
-                  profileUser?.education &&
-                  profileUser?.education.map((edu, index) => (
-                    <Box
-                      key={index}
-                      head={edu?.institution}
-                      date={convertDate(edu?.startDate) + " - " + convertDate(edu?.endDate)}
-                      spec={edu?.degree}
-                      desc={edu?.description}
-                      score={edu?.score}
-                    />
-                  ))}
+            {profileUser?.education?.length > 0 && (
+              <div style={{ marginTop: "20px" }}>
+                <h2 style={{ fontSize: "2rem", fontFamily: "Oswald, sans-serif", marginBottom: "10px" }}>Education</h2>
+                {profileUser?.education?.map((edu, index) => (
+                  <Box
+                    key={index}
+                    head={edu.institution}
+                    date={`${convertDate(edu.startDate)} - ${convertDate(edu.endDate)}`}
+                    spec={edu.degree}
+                    desc={edu.description}
+                    score={edu.score}
+                  />
+                ))}
               </div>
-            </div>
+            )}
 
             {/* Projects */}
-            {profileUser?.projects && profileUser?.projects.length > 0 && (
-              <div className="projects">
-                <h2>Projects</h2>
-
-                <div className="project-boxes">
-                  {
-                    // Render project boxes here
-                    profileUser &&
-                      profileUser?.projects &&
-                      profileUser?.projects.map((project, index) => (
-                        <Box
-                          key={index}
-                          head={project?.title}
-                          date={convertDate(project?.startDate) + " - " + convertDate(project?.endDate)}
-                          desc={project?.description}
-                          skills={project?.techStack}
-                        />
-                      ))
-                  }
-
-                  {/* Render project boxes here */}
-                </div>
+            {profileUser?.projects?.length > 0 && (
+              <div style={{ marginTop: "20px" }}>
+                <h2 style={{ fontSize: "2rem", fontFamily: "Oswald, sans-serif", marginBottom: "10px" }}>Projects</h2>
+                {profileUser?.projects?.map((project, index) => (
+                  <Box
+                    key={index}
+                    head={project.title}
+                    date={`${convertDate(project.startDate)} - ${convertDate(project.endDate)}`}
+                    desc={project.description}
+                    skills={project.techStack}
+                  />
+                ))}
               </div>
             )}
           </>

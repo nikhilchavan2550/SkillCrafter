@@ -15,11 +15,10 @@ const UserProfileDropdown = () => {
   const navigate = useNavigate();
 
   const handleLogout = async () => {
-    // Perform logout logic
     localStorage.removeItem("userInfo");
     setUser(null);
     try {
-      const response = await axios.get("/auth/logout");
+      await axios.get("/auth/logout");
       window.location.href = "http://localhost:5173/login";
     } catch (error) {
       console.log(error);
@@ -33,9 +32,7 @@ const UserProfileDropdown = () => {
     <div
       href=""
       ref={ref}
-      onClick={(e) => {
-        onClick(e);
-      }}
+      onClick={(e) => onClick(e)}
       style={{ display: "flex", alignItems: "center", cursor: "pointer" }}
     >
       <div
@@ -48,7 +45,7 @@ const UserProfileDropdown = () => {
         }}
       >
         <img
-          src={user?.picture} // Replace with your image URL
+          src={user?.picture}
           alt="User Avatar"
           style={{ width: "100%", height: "100%", objectFit: "cover" }}
         />
@@ -75,7 +72,6 @@ const UserProfileDropdown = () => {
   return (
     <Dropdown>
       <Dropdown.Toggle as={CustomToggle} id="dropdown-custom-components" />
-
       <Dropdown.Menu as={CustomMenu}>
         <Dropdown.Item
           onClick={() => {
@@ -98,12 +94,10 @@ const Header = () => {
 
   useEffect(() => {
     setNavUser(JSON.parse(localStorage.getItem("userInfo")));
-    // console.log("navUser", navUser);
   }, [user]);
 
   useEffect(() => {
     const handleUrlChange = () => {
-      // Your logic to run when there is a change in the URL
       console.log("URL has changed:", window.location.href);
     };
     window.addEventListener("popstate", handleUrlChange);
@@ -122,10 +116,25 @@ const Header = () => {
 
   return (
     <>
-      <Navbar key="md" expand="md" className="bg-body-primary" style={{ backgroundColor: "#3BB4A1", zIndex: 998 }}>
+      <Navbar
+        key="md"
+        expand="md"
+        className="bg-body-primary"
+        style={{
+          backgroundColor: "#a9dce3", // Light blue background
+          zIndex: 998,
+        }}
+      >
         <Container fluid>
-          <Navbar.Brand href="/" style={{ fontFamily: "Josefin Sans, sans-serif", color: "#2d2d2d", fontWeight: 500 }}>
-            SKILL SWAP
+          <Navbar.Brand
+            href="/"
+            style={{
+              fontFamily: "Josefin Sans, sans-serif",
+              color: "#546E7A", // Darker blue text
+              fontWeight: 700,
+            }}
+          >
+            SKILL CRAFTER
           </Navbar.Brand>
           <Navbar.Toggle aria-controls={`offcanvasNavbar-expand-md`} />
           <Navbar.Offcanvas
@@ -136,14 +145,24 @@ const Header = () => {
             <Offcanvas.Header closeButton>
               <Offcanvas.Title
                 id={`offcanvasNavbarLabel-expand-md`}
-                style={{ fontFamily: "Josefin Sans, sans-serif", color: "#028477" }}
+                style={{
+                  fontFamily: "Josefin Sans, sans-serif",
+                  color: "#546E7A",
+                }}
               >
-                SKILL SWAP
+                SKILL CRAFTER
               </Offcanvas.Title>
             </Offcanvas.Header>
             <Offcanvas.Body>
               <Nav className="justify-content-end flex-grow-1 pe-3">
-                <Nav.Link as={Link} to="/" style={{ fontFamily: "Montserrat, sans-serif", color: "#2d2d2d" }}>
+                <Nav.Link
+                  as={Link}
+                  to="/"
+                  style={{
+                    fontFamily: "Montserrat, sans-serif",
+                    color: "#546E7A",
+                  }}
+                >
                   Home
                 </Nav.Link>
                 {navUser !== null ? (
@@ -151,21 +170,30 @@ const Header = () => {
                     <Nav.Link
                       as={Link}
                       to="/discover"
-                      style={{ fontFamily: "Montserrat, sans-serif", color: "#2d2d2d" }}
+                      style={{
+                        fontFamily: "Montserrat, sans-serif",
+                        color: "#546E7A",
+                      }}
                     >
                       Discover
                     </Nav.Link>
-                    <Nav.Link as={Link} to="/chats" style={{ fontFamily: "Montserrat, sans-serif", color: "#2d2d2d" }}>
+                    <Nav.Link
+                      as={Link}
+                      to="/chats"
+                      style={{
+                        fontFamily: "Montserrat, sans-serif",
+                        color: "#546E7A",
+                      }}
+                    >
                       Your Chats
                     </Nav.Link>
-                    {/* Paakhi discover page ke links yeha dalde please */}
                     {discover && (
                       <>
                         <Nav.Link
                           href="#for-you"
                           style={{
                             fontFamily: "Montserrat, sans-serif",
-                            color: "#f56664",
+                            color: "#546E7A",
                             fontSize: "1.2rem",
                             marginTop: "2rem",
                           }}
@@ -175,35 +203,18 @@ const Header = () => {
                         </Nav.Link>
                         <Nav.Link
                           href="#popular"
-                          style={{ fontFamily: "Montserrat, sans-serif", color: "#3bb4a1", fontSize: "1.2rem" }}
+                          style={{
+                            fontFamily: "Montserrat, sans-serif",
+                            color: "#546E7A",
+                            fontSize: "1.2rem",
+                          }}
                           className="d-md-none"
                         >
                           Popular
                         </Nav.Link>
-                        <Nav.Link
-                          href="#web-development"
-                          style={{ fontFamily: "Montserrat, sans-serif", color: "#013e38", marginLeft: "1.5rem" }}
-                          className="d-md-none"
-                        >
-                          Web Development
-                        </Nav.Link>
-                        <Nav.Link
-                          href="#machine-learning"
-                          style={{ fontFamily: "Montserrat, sans-serif", color: "#013e38", marginLeft: "1.5rem" }}
-                          className="d-md-none"
-                        >
-                          Machine Learning
-                        </Nav.Link>
-                        <Nav.Link
-                          href="#others"
-                          style={{ fontFamily: "Montserrat, sans-serif", color: "#013e38", marginLeft: "1.5rem" }}
-                          className="d-md-none"
-                        >
-                          Others
-                        </Nav.Link>
                       </>
                     )}
-                    <Nav.Link as={Dropdown} style={{ fontFamily: "Montserrat, sans-serif", color: "#2d2d2d" }}>
+                    <Nav.Link as={Dropdown}>
                       <UserProfileDropdown />
                     </Nav.Link>
                   </>
@@ -212,18 +223,31 @@ const Header = () => {
                     <Nav.Link
                       as={Link}
                       to="/about_us"
-                      style={{ fontFamily: "Montserrat, sans-serif", color: "#2d2d2d" }}
+                      style={{
+                        fontFamily: "Montserrat, sans-serif",
+                        color: "#546E7A",
+                      }}
                     >
                       About Us
                     </Nav.Link>
                     <Nav.Link
                       as={Link}
                       to="/#why-skill-swap"
-                      style={{ fontFamily: "Montserrat, sans-serif", color: "#2d2d2d" }}
+                      style={{
+                        fontFamily: "Montserrat, sans-serif",
+                        color: "#546E7A",
+                      }}
                     >
-                      Why SkillSwap
+                      Why SkillCrafter
                     </Nav.Link>
-                    <Nav.Link as={Link} to="/login" style={{ fontFamily: "Montserrat, sans-serif", color: "#2d2d2d" }}>
+                    <Nav.Link
+                      as={Link}
+                      to="/login"
+                      style={{
+                        fontFamily: "Montserrat, sans-serif",
+                        color: "#546E7A",
+                      }}
+                    >
                       Login/Register
                     </Nav.Link>
                   </>

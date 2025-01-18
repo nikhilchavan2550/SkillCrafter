@@ -10,33 +10,31 @@ const Login = () => {
   };
 
   const containerStyle = {
-    // height: "90.4vh",
     minHeight: "90.4vh",
-    // height: "100%",
     display: "flex",
     flexDirection: "column",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#2d2d2d",
+    backgroundColor: "#000000", // Black background
   };
 
   const loginBoxStyle = {
     height: "200px",
     display: "flex",
-    backgroundColor: "#2d2d2d",
+    backgroundColor: "#000000", // Black background for the box
     flexDirection: "column",
     justifyContent: "space-between",
     padding: "20px",
-    border: "1px solid #fcaaa8", // Border color
+    border: "2px solid #a9dce3", // Light blue border
     borderRadius: "10px",
-    boxShadow: "10px 10px 10px #5c4242",
+    boxShadow: "10px 10px 10px #546E7A", // Darker blue shadow
     zIndex: "999",
   };
 
   const titleStyle = {
     fontSize: "50px",
     fontFamily: "Oswald, sans-serif", // Font family
-    color: "#fcaaa8", // Text color
+    color: "#a9dce3", // Light blue for the title
     textAlign: "center",
   };
 
@@ -46,8 +44,8 @@ const Login = () => {
   };
 
   const buttonStyle = {
-    backgroundColor: "#f56664", // Button background color
-    color: "#fff", // Button text color
+    backgroundColor: "#a9dce3", // Light blue button background
+    color: "#546E7A", // Darker blue text
     fontFamily: "Montserrat",
     border: "none",
     padding: "10px 20px",
@@ -56,8 +54,8 @@ const Login = () => {
   };
 
   const hoverButtonStyle = {
-    backgroundColor: "#fff", // Button background color on hover
-    color: "#f56664", // Button text color on hover
+    backgroundColor: "#546E7A", // Darker blue background on hover
+    color: "#a9dce3", // Light blue text on hover
     fontFamily: "Montserrat",
     border: "none",
     padding: "10px 20px",

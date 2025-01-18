@@ -5,8 +5,9 @@ const containerStyle = {
   display: "flex",
   flexDirection: "row",
   alignItems: "start",
-  backgroundColor: "#2D2D2D",
+  backgroundColor: "#000000", // Black background
   justifyContent: "center",
+  padding: "40px",
 };
 
 const contentContainerStyle = {
@@ -17,7 +18,7 @@ const contentContainerStyle = {
 
 const titleStyle = {
   fontFamily: "Oswald, sans-serif",
-  color: "#FBF1A4",
+  color: "#a9dce3", // Light blue for the title text
   fontSize: "3rem",
   fontWeight: "bold",
   marginBottom: "20px",
@@ -26,7 +27,7 @@ const titleStyle = {
 
 const descriptionStyle = {
   fontFamily: "Montserrat, sans-serif",
-  color: "#f2efdb",
+  color: "#EAEAEA", // Light gray text for readability on black background
   fontSize: "1rem",
   lineHeight: "1.6",
   textAlign: "left",
@@ -41,7 +42,7 @@ const imageContainerStyle = {
 
 const AboutUs = () => {
   return (
-    <div className="content1-container">
+    <div style={containerStyle}>
       <div style={contentContainerStyle}>
         <h2 style={titleStyle}>About Us</h2>
         <p style={descriptionStyle}>
@@ -64,7 +65,18 @@ const AboutUs = () => {
           everyone has the opportunity to thrive.
         </p>
       </div>
-      <img src={"/assets/images/about us.png"} style={{ maxWidth: "50vw", maxHeight: "100vh" }} />
+      <div style={imageContainerStyle}>
+        <img
+          src={"/assets/images/about us.png"}
+          alt="About Us"
+          style={{
+            maxWidth: "50vw",
+            maxHeight: "100vh",
+            border: "5px solid #a9dce3", // Light blue border for consistency
+            borderRadius: "10px",
+          }}
+        />
+      </div>
     </div>
   );
 };
