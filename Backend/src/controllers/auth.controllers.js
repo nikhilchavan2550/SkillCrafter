@@ -28,13 +28,12 @@ export const googleAuthHandler = passport.authenticate("google", {
 });
 
 export const googleAuthCallback = passport.authenticate("google", {
-  failureRedirect: "http://localhost:5173/login",
+  failureRedirect: process.env.CLIENT_URL + "/login",  // ✅ Updated for production
   session: false,
 });
 
 export const handleGoogleLoginCallback = asyncHandler(async (req, res) => {
   console.log("\n******** Inside handleGoogleLoginCallback function ********");
-  // console.log("User Google Info", req.user);
 
   const existingUser = await User.findOne({ email: req.user._json.email });
 
@@ -42,7 +41,7 @@ export const handleGoogleLoginCallback = asyncHandler(async (req, res) => {
     const jwtToken = generateJWTToken_username(existingUser);
     const expiryDate = new Date(Date.now() + 1 * 60 * 60 * 1000);
     res.cookie("accessToken", jwtToken, { httpOnly: true, expires: expiryDate, secure: false });
-    return res.redirect(`http://localhost:5173/discover`);
+    return res.redirect(`${process.env.CLIENT_URL}/discover`); // ✅ Updated for production
   }
 
   let unregisteredUser = await UnRegisteredUser.findOne({ email: req.user._json.email });
@@ -57,7 +56,7 @@ export const handleGoogleLoginCallback = asyncHandler(async (req, res) => {
   const jwtToken = generateJWTToken_email(unregisteredUser);
   const expiryDate = new Date(Date.now() + 0.5 * 60 * 60 * 1000);
   res.cookie("accessTokenRegistration", jwtToken, { httpOnly: true, expires: expiryDate, secure: false });
-  return res.redirect("http://localhost:5173/register");
+  return res.redirect(`${process.env.CLIENT_URL}/register`); // ✅ Updated for production
 });
 
 export const handleLogout = (req, res) => {
