@@ -13,7 +13,19 @@ import RequestCard from "./RequestCard";
 import "./Chats.css";
 import Modal from "react-bootstrap/Modal";
 
-var socket;
+let socket;
+
+// 1) Define your environment-based URLs here
+const SERVER_URL =
+  import.meta.env.MODE === "development"
+    ? "http://localhost:8000"           // local dev
+    : "https://skillcrafter.onrender.com"; // production backend on Render
+
+const FRONTEND_URL =
+  import.meta.env.MODE === "development"
+    ? "http://localhost:5173"              // local dev
+    : "https://skillcrafter.vercel.app";   // production frontend on Vercel
+
 const Chats = () => {
   const [showChatHistory, setShowChatHistory] = useState(true);
   const [showRequests, setShowRequests] = useState(null);
@@ -24,180 +36,129 @@ const Chats = () => {
   const [scheduleModalShow, setScheduleModalShow] = useState(false);
   const [requestModalShow, setRequestModalShow] = useState(false);
 
-  // to store selected chat
+  // For selected chat and its messages
   const [selectedChat, setSelectedChat] = useState(null);
-  // to store chat messages
   const [chatMessages, setChatMessages] = useState([]);
-  // to store chats
   const [chats, setChats] = useState([]);
   const [chatLoading, setChatLoading] = useState(true);
   const [chatMessageLoading, setChatMessageLoading] = useState(false);
-  // to store message
   const [message, setMessage] = useState("");
 
-  const [selectedRequest, setSelectedRequest] = useState(null);
-
-  const { user, setUser } = useUser();
-
-  const navigate = useNavigate();
-
+  // For handling schedule form
   const [scheduleForm, setScheduleForm] = useState({
     date: "",
     time: "",
   });
 
+  // For handling requests
+  const [selectedRequest, setSelectedRequest] = useState(null);
+
+  const { user, setUser } = useUser();
+  const navigate = useNavigate();
+
+  // 2) Fetch all chats on mount
   useEffect(() => {
     fetchChats();
   }, []);
 
+  // 3) Initialize socket connection
   useEffect(() => {
-    socket = io(axios.defaults.baseURL);
+    socket = io(SERVER_URL);
     if (user) {
       socket.emit("setup", user);
     }
+
     socket.on("message recieved", (newMessageRecieved) => {
-      console.log("New Message Recieved: ", newMessageRecieved);
-      console.log("Selected Chat: ", selectedChat);
-      console.log("Selected Chat ID: ", selectedChat.id);
-      console.log("New Message Chat ID: ", newMessageRecieved.chatId._id);
+      // Only add message if it belongs to the currently selected chat
       if (selectedChat && selectedChat.id === newMessageRecieved.chatId._id) {
         setChatMessages((prevState) => [...prevState, newMessageRecieved]);
       }
     });
+
     return () => {
       socket.off("message recieved");
     };
   }, [selectedChat]);
 
+  // 4) Fetch all user chats
   const fetchChats = async () => {
     try {
       setChatLoading(true);
       const tempUser = JSON.parse(localStorage.getItem("userInfo"));
-      const { data } = await axios.get(`${import.meta.env.VITE_SERVER_URL}/chat`);
-
-      // console.log("Chats", data.data);
+      const { data } = await axios.get(`${SERVER_URL}/chat`); 
       toast.success(data.message);
+
       if (tempUser?._id) {
+        // Convert the array of chats into an easier format
         const temp = data.data.map((chat) => {
+          const otherUser = chat.users.find((u) => u?._id !== tempUser?._id);
           return {
             id: chat._id,
-            name: chat?.users.find((u) => u?._id !== tempUser?._id).name,
-            picture: chat?.users.find((u) => u?._id !== tempUser?._id).picture,
-            username: chat?.users.find((u) => u?._id !== tempUser?._id).username,
+            name: otherUser?.name,
+            picture: otherUser?.picture,
+            username: otherUser?.username,
           };
         });
         setChats(temp);
       }
-      // console.log(temp);
     } catch (err) {
       console.log(err);
-      if (err?.response?.data?.message) {
-        toast.error(err.response.data.message);
-        if (err.response.data.message === "Please Login") {
-          localStorage.removeItem("userInfo");
-          setUser(null);
-          await axios.get("/auth/logout");
-          navigate("/login");
-        }
-      } else {
-        toast.error("Something went wrong");
-      }
+      handleAxiosError(err);
     } finally {
       setChatLoading(false);
     }
   };
 
-  const handleScheduleClick = () => {
-    setScheduleModalShow(true);
-  };
-
+  // 5) On clicking a chat, fetch that chat’s messages
   const handleChatClick = async (chatId) => {
     try {
       setChatMessageLoading(true);
-      const { data } = await axios.get(`${import.meta.env.VITE_SERVER_URL}/message/getMessages/${chatId}`);
+      const { data } = await axios.get(`${SERVER_URL}/message/getMessages/${chatId}`);
       setChatMessages(data.data);
-      // console.log("Chat Messages:", data.data);
       setMessage("");
-      // console.log("Chats: ", chats);
+
       const chatDetails = chats.find((chat) => chat.id === chatId);
       setSelectedChat(chatDetails);
-      // console.log("selectedChat", chatDetails);
-      // console.log("Data", data.message);
+
+      // Join the socket room for this specific chat
       socket.emit("join chat", chatId);
       toast.success(data.message);
     } catch (err) {
       console.log(err);
-      if (err?.response?.data?.message) {
-        toast.error(err.response.data.message);
-        if (err.response.data.message === "Please Login") {
-          localStorage.removeItem("userInfo");
-          setUser(null);
-          await axios.get("/auth/logout");
-          navigate("/login");
-        }
-      } else {
-        toast.error("Something went wrong");
-      }
+      handleAxiosError(err);
     } finally {
       setChatMessageLoading(false);
     }
   };
 
-  const sendMessage = async (e) => {
+  // 6) Send a new message
+  const sendMessage = async () => {
     try {
-      socket.emit("stop typing", selectedChat._id);
-      if (message === "") {
+      if (!selectedChat?._id) return; // If no chat is selected, do nothing
+      if (message.trim() === "") {
         toast.error("Message is empty");
         return;
       }
-      const { data } = await axios.post("/message/sendMessage", { chatId: selectedChat.id, content: message });
-      // console.log("after sending message", data);
+      socket.emit("stop typing", selectedChat.id);
+
+      // Send message to backend
+      const { data } = await axios.post(`${SERVER_URL}/message/sendMessage`, {
+        chatId: selectedChat.id,
+        content: message,
+      });
+
+      // Emit real-time update, add to local messages
       socket.emit("new message", data.data);
-      setChatMessages((prevState) => [...prevState, data.data]);
+      setChatMessages((prev) => [...prev, data.data]);
       setMessage("");
-      // console.log("Data", data.message);
       toast.success(data.message);
     } catch (err) {
       console.log(err);
-      if (err?.response?.data?.message) {
-        toast.error(err.response.data.message);
-        if (err.response.data.message === "Please Login") {
-          await axios.get("/auth/logout");
-          setUser(null);
-          localStorage.removeItem("userInfo");
-          navigate("/login");
-        }
-      } else {
-        toast.error("Something went wrong");
-      }
+      handleAxiosError(err);
     }
   };
 
-  const getRequests = async () => {
-    try {
-      setRequestLoading(true);
-      const { data } = await axios.get("/request/getRequests");
-      setRequests(data.data);
-      console.log(data.data);
-      toast.success(data.message);
-    } catch (err) {
-      console.log(err);
-      if (err?.response?.data?.message) {
-        toast.error(err.response.data.message);
-        if (err.response.data.message === "Please Login") {
-          await axios.get("/auth/logout");
-          setUser(null);
-          localStorage.removeItem("userInfo");
-          navigate("/login");
-        }
-      } else {
-        toast.error("Something went wrong");
-      }
-    } finally {
-      setRequestLoading(false);
-    }
-  };
-
+  // 7) Switch between Chat and Requests tab
   const handleTabClick = async (tab) => {
     if (tab === "chat") {
       setShowChatHistory(true);
@@ -210,71 +171,118 @@ const Chats = () => {
     }
   };
 
+  // 8) Fetch requests
+  const getRequests = async () => {
+    try {
+      setRequestLoading(true);
+      const { data } = await axios.get(`${SERVER_URL}/request/getRequests`);
+      setRequests(data.data);
+      toast.success(data.message);
+    } catch (err) {
+      console.log(err);
+      handleAxiosError(err);
+    } finally {
+      setRequestLoading(false);
+    }
+  };
+
+  // 9) Clicking a request opens a modal
   const handleRequestClick = (request) => {
     setSelectedRequest(request);
     setRequestModalShow(true);
   };
 
-  const handleRequestAccept = async (e) => {
-    console.log("Request accepted");
-
+  // 10) Accept a request
+  const handleRequestAccept = async () => {
+    if (!selectedRequest) return;
     try {
       setAcceptRequestLoading(true);
-      const { data } = await axios.post("/request/acceptRequest", { requestId: selectedRequest._id });
-      console.log(data);
+      const { data } = await axios.post(`${SERVER_URL}/request/acceptRequest`, {
+        requestId: selectedRequest._id,
+      });
       toast.success(data.message);
-      // remove this request from the requests list
-      setRequests((prevState) => prevState.filter((request) => request._id !== selectedRequest._id));
+      // Remove this request from the list
+      setRequests((prev) => prev.filter((req) => req._id !== selectedRequest._id));
     } catch (err) {
       console.log(err);
-      if (err?.response?.data?.message) {
-        toast.error(err.response.data.message);
-        if (err.response.data.message === "Please Login") {
-          await axios.get("/auth/logout");
-          setUser(null);
-          localStorage.removeItem("userInfo");
-          navigate("/login");
-        }
-      } else {
-        toast.error("Something went wrong");
-      }
+      handleAxiosError(err);
     } finally {
       setAcceptRequestLoading(false);
       setRequestModalShow(false);
     }
   };
 
+  // 11) Reject a request
   const handleRequestReject = async () => {
-    console.log("Request rejected");
+    if (!selectedRequest) return;
     try {
       setAcceptRequestLoading(true);
-      const { data } = axios.post("/request/rejectRequest", { requestId: selectedRequest._id });
-      console.log(data);
+      const { data } = await axios.post(`${SERVER_URL}/request/rejectRequest`, {
+        requestId: selectedRequest._id,
+      });
       toast.success(data.message);
-      setRequests((prevState) => prevState.filter((request) => request._id !== selectedRequest._id));
+      setRequests((prev) => prev.filter((req) => req._id !== selectedRequest._id));
     } catch (err) {
       console.log(err);
-      if (err?.response?.data?.message) {
-        toast.error(err.response.data.message);
-        if (err.response.data.message === "Please Login") {
-          await axios.get("/auth/logout");
-          setUser(null);
-          localStorage.removeItem("userInfo");
-          navigate("/login");
-        }
-      } else {
-        toast.error("Something went wrong");
-      }
+      handleAxiosError(err);
     } finally {
       setAcceptRequestLoading(false);
       setRequestModalShow(false);
     }
   };
 
+  // 12) Open “Schedule Video Call” modal
+  const handleScheduleClick = () => {
+    setScheduleModalShow(true);
+  };
+
+  // 13) Handle submission of schedule form
+  const handleScheduleSubmit = async (e) => {
+    e.preventDefault();
+    if (!selectedChat) return;
+    if (!scheduleForm.date || !scheduleForm.time) {
+      toast.error("Please fill all the fields");
+      return;
+    }
+    try {
+      const payload = {
+        date: scheduleForm.date,
+        time: scheduleForm.time,
+        username: selectedChat.username,
+      };
+      const { data } = await axios.post(`${SERVER_URL}/user/sendScheduleMeet`, payload);
+      toast.success("Request mail has been sent successfully!");
+      setScheduleForm({ date: "", time: "" });
+      setScheduleModalShow(false);
+    } catch (err) {
+      console.log(err);
+      handleAxiosError(err);
+    }
+  };
+
+  // 14) Central error handler for axios
+  const handleAxiosError = async (err) => {
+    if (err?.response?.data?.message) {
+      toast.error(err.response.data.message);
+      if (err.response.data.message === "Please Login") {
+        // Force a logout & redirect
+        localStorage.removeItem("userInfo");
+        setUser(null);
+        await axios.get(`${SERVER_URL}/auth/logout`);
+        navigate(`${FRONTEND_URL}/login`);
+      }
+    } else {
+      toast.error("Something went wrong");
+    }
+  };
+
+  // ----------------------------------------------------------------
+  // RENDER
+  // ----------------------------------------------------------------
   return (
     <div className="container-overall">
       <div className="container-right">
-        {/* Chat History */}
+        {/* Left Container (Chats / Requests) */}
         <div className="container-left">
           {/* Tabs */}
           <div className="tabs">
@@ -282,9 +290,9 @@ const Chats = () => {
               className="chatButton"
               variant="secondary"
               style={{
-                borderTop: showChatHistory ? "1px solid lightgrey" : "1px solid lightgrey",
-                borderRight: showChatHistory ? "1px solid lightgrey" : "1px solid lightgrey",
-                borderLeft: showChatHistory ? "1px solid lightgrey" : "1px solid lightgrey",
+                borderTop: "1px solid lightgrey",
+                borderRight: "1px solid lightgrey",
+                borderLeft: "1px solid lightgrey",
                 borderBottom: "none",
                 backgroundColor: showChatHistory ? "#3bb4a1" : "#2d2d2d",
                 color: showChatHistory ? "black" : "white",
@@ -301,9 +309,9 @@ const Chats = () => {
               className="requestButton"
               variant="secondary"
               style={{
-                borderTop: showRequests ? "1px solid lightgrey" : "1px solid lightgrey",
-                borderRight: showRequests ? "1px solid lightgrey" : "1px solid lightgrey",
-                borderLeft: showRequests ? "1px solid lightgrey" : "1px solid lightgrey",
+                borderTop: "1px solid lightgrey",
+                borderRight: "1px solid lightgrey",
+                borderLeft: "1px solid lightgrey",
                 borderBottom: "none",
                 backgroundColor: showChatHistory ? "#2d2d2d" : "#3bb4a1",
                 color: showChatHistory ? "white" : "black",
@@ -318,7 +326,7 @@ const Chats = () => {
             </Button>
           </div>
 
-          {/* Chat History or Requests List */}
+          {/* Chat History */}
           {showChatHistory && (
             <div className="container-left">
               <ListGroup className="chat-list">
@@ -327,27 +335,27 @@ const Chats = () => {
                     <Spinner animation="border" variant="primary" />
                   </div>
                 ) : (
-                  <>
-                    {chats.map((chat) => (
-                      <ListGroup.Item
-                        key={chat.id}
-                        onClick={() => handleChatClick(chat.id)}
-                        style={{
-                          cursor: "pointer",
-                          marginBottom: "10px",
-                          padding: "10px",
-                          backgroundColor: selectedChat?.id === chat?.id ? "#3BB4A1" : "lightgrey",
-                          borderRadius: "5px",
-                        }}
-                      >
-                        {chat.name}
-                      </ListGroup.Item>
-                    ))}
-                  </>
+                  chats.map((chat) => (
+                    <ListGroup.Item
+                      key={chat.id}
+                      onClick={() => handleChatClick(chat.id)}
+                      style={{
+                        cursor: "pointer",
+                        marginBottom: "10px",
+                        padding: "10px",
+                        backgroundColor: selectedChat?.id === chat?.id ? "#3BB4A1" : "lightgrey",
+                        borderRadius: "5px",
+                      }}
+                    >
+                      {chat.name}
+                    </ListGroup.Item>
+                  ))
                 )}
               </ListGroup>
             </div>
           )}
+
+          {/* Requests */}
           {showRequests && (
             <div className="container-left">
               <ListGroup style={{ padding: "10px" }}>
@@ -356,57 +364,53 @@ const Chats = () => {
                     <Spinner animation="border" variant="primary" />
                   </div>
                 ) : (
-                  <>
-                    {requests.map((request) => (
-                      <ListGroup.Item
-                        key={request.id}
-                        onClick={() => handleRequestClick(request)}
-                        style={{
-                          cursor: "pointer",
-                          marginBottom: "10px",
-                          padding: "10px",
-                          backgroundColor:
-                            selectedRequest && selectedRequest.id === request.id ? "#3BB4A1" : "lightgrey",
-                          borderRadius: "5px",
-                        }}
-                      >
-                        {request.name}
-                      </ListGroup.Item>
-                    ))}
-                  </>
+                  requests.map((request) => (
+                    <ListGroup.Item
+                      key={request.id}
+                      onClick={() => handleRequestClick(request)}
+                      style={{
+                        cursor: "pointer",
+                        marginBottom: "10px",
+                        padding: "10px",
+                        backgroundColor:
+                          selectedRequest && selectedRequest.id === request.id ? "#3BB4A1" : "lightgrey",
+                        borderRadius: "5px",
+                      }}
+                    >
+                      {request.name}
+                    </ListGroup.Item>
+                  ))
                 )}
               </ListGroup>
             </div>
           )}
+
+          {/* Request Modal */}
           {requestModalShow && (
             <div className="modalBG" onClick={() => setRequestModalShow(false)}>
               <div className="modalContent">
                 <h2 style={{ textAlign: "center" }}>Confirm your choice?</h2>
                 {selectedRequest && (
                   <RequestCard
-                    name={selectedRequest?.name}
-                    skills={selectedRequest?.skillsProficientAt}
+                    name={selectedRequest.name}
+                    skills={selectedRequest.skillsProficientAt}
                     rating="4"
-                    picture={selectedRequest?.picture}
-                    username={selectedRequest?.username}
-                    onClose={() => setSelectedRequest(null)} // Close modal when clicked outside or close button
+                    picture={selectedRequest.picture}
+                    username={selectedRequest.username}
+                    onClose={() => setSelectedRequest(null)}
                   />
                 )}
                 <div style={{ display: "flex", justifyContent: "center" }}>
                   <button className="connect-button" style={{ marginLeft: "0" }} onClick={handleRequestAccept}>
                     {acceptRequestLoading ? (
-                      <div className="row m-auto ">
-                        <Spinner animation="border" variant="primary" />
-                      </div>
+                      <Spinner animation="border" variant="primary" />
                     ) : (
                       "Accept!"
                     )}
                   </button>
                   <button className="report-button" onClick={handleRequestReject}>
                     {acceptRequestLoading ? (
-                      <div className="row m-auto ">
-                        <Spinner animation="border" variant="primary" />
-                      </div>
+                      <Spinner animation="border" variant="primary" />
                     ) : (
                       "Reject"
                     )}
@@ -416,7 +420,8 @@ const Chats = () => {
             </div>
           )}
         </div>
-        {/* Right Section */}
+
+        {/* Right Container (Chat Messages) */}
         <div className="container-chat">
           {/* Profile Bar */}
           <div
@@ -428,12 +433,15 @@ const Chats = () => {
               minHeight: "50px",
             }}
           >
-            {/* Profile Info (Placeholder) */}
             {selectedChat && (
               <>
                 <div>
                   <img
-                    src={selectedChat?.picture ? selectedChat.picture : "https://via.placeholder.com/150"}
+                    src={
+                      selectedChat?.picture
+                        ? selectedChat.picture
+                        : "https://via.placeholder.com/150"
+                    }
                     alt="Profile"
                     style={{ width: "40px", height: "40px", borderRadius: "50%", marginRight: "10px" }}
                   />
@@ -446,8 +454,6 @@ const Chats = () => {
                 </Button>
               </>
             )}
-
-            {/* Schedule Video Call Button */}
           </div>
 
           {/* Chat Interface */}
@@ -464,33 +470,29 @@ const Chats = () => {
             >
               {selectedChat ? (
                 <ScrollableFeed forceScroll="true">
-                  {chatMessages.map((message, index) => {
-                    // console.log("user:", user._id);
-                    // console.log("sender:", message.sender);
-                    return (
+                  {chatMessages.map((msg, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        display: "flex",
+                        justifyContent: msg.sender._id === user._id ? "flex-end" : "flex-start",
+                        marginBottom: "10px",
+                      }}
+                    >
                       <div
-                        key={index}
                         style={{
-                          display: "flex",
-                          justifyContent: message.sender._id == user._id ? "flex-end" : "flex-start",
-                          marginBottom: "10px",
+                          backgroundColor: msg.sender._id === user._id ? "#3BB4A1" : "#2d2d2d",
+                          color: "#ffffff",
+                          padding: "10px",
+                          borderRadius: "10px",
+                          maxWidth: "70%",
+                          textAlign: msg.sender._id === user._id ? "right" : "left",
                         }}
                       >
-                        <div
-                          style={{
-                            backgroundColor: message.sender._id === user._id ? "#3BB4A1" : "#2d2d2d",
-                            color: "#ffffff",
-                            padding: "10px",
-                            borderRadius: "10px",
-                            maxWidth: "70%",
-                            textAlign: message.sender._id == user._id ? "right" : "left",
-                          }}
-                        >
-                          {message.content}
-                        </div>
+                        {msg.content}
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                 </ScrollableFeed>
               ) : (
                 <>
@@ -500,9 +502,7 @@ const Chats = () => {
                     </div>
                   ) : (
                     <div className="row w-100 h-100 d-flex justify-content-center align-items-center">
-                      <h3 className="row w-100 d-flex justify-content-center align-items-center">
-                        Select a chat to start messaging
-                      </h3>
+                      <h3>Select a chat to start messaging</h3>
                     </div>
                   )}
                 </>
@@ -514,9 +514,9 @@ const Chats = () => {
               <div
                 style={{
                   position: "absolute",
-                  bottom: "0",
-                  left: "0",
-                  right: "0",
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
                   padding: "10px",
                   borderTop: "1px solid #2d2d2d",
                   display: "flex",
@@ -529,14 +529,18 @@ const Chats = () => {
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   style={{
-                    flex: "1",
+                    flex: 1,
                     padding: "10px",
                     borderRadius: "5px",
                     marginRight: "10px",
                     border: "1px solid #2d2d2d",
                   }}
                 />
-                <Button variant="success" style={{ padding: "10px 20px", borderRadius: "5px" }} onClick={sendMessage}>
+                <Button
+                  variant="success"
+                  style={{ padding: "10px 20px", borderRadius: "5px" }}
+                  onClick={sendMessage}
+                >
                   Send
                 </Button>
               </div>
@@ -550,12 +554,12 @@ const Chats = () => {
         <div
           style={{
             position: "fixed",
-            top: "0",
-            left: "0",
+            top: 0,
+            left: 0,
             width: "100%",
             height: "100%",
             backgroundColor: "rgba(0, 0, 0, 0.7)",
-            zIndex: "500",
+            zIndex: 500,
           }}
         >
           <div
@@ -568,64 +572,34 @@ const Chats = () => {
               color: "#3BB4A1",
               padding: "50px",
               borderRadius: "10px",
-              zIndex: "1001",
+              zIndex: 1001,
             }}
           >
             <h3>Request a Meeting</h3>
             <Form>
-              <Form.Group controlId="formDate" style={{ marginBottom: "20px", zIndex: "1001" }}>
+              <Form.Group controlId="formDate" style={{ marginBottom: "20px" }}>
                 <Form.Label>Preferred Date</Form.Label>
                 <Form.Control
                   type="date"
                   value={scheduleForm.date}
-                  onChange={(e) => setScheduleForm({ ...scheduleForm, date: e.target.value })}
+                  onChange={(e) =>
+                    setScheduleForm({ ...scheduleForm, date: e.target.value })
+                  }
                 />
               </Form.Group>
 
-              <Form.Group controlId="formTime" style={{ marginBottom: "20px", zIndex: "1001" }}>
+              <Form.Group controlId="formTime" style={{ marginBottom: "20px" }}>
                 <Form.Label>Preferred Time</Form.Label>
                 <Form.Control
                   type="time"
                   value={scheduleForm.time}
-                  onChange={(e) => setScheduleForm({ ...scheduleForm, time: e.target.value })}
+                  onChange={(e) =>
+                    setScheduleForm({ ...scheduleForm, time: e.target.value })
+                  }
                 />
               </Form.Group>
 
-              <Button
-                variant="success"
-                type="submit"
-                onClick={async (e) => {
-                  e.preventDefault();
-                  if (scheduleForm.date === "" || scheduleForm.time === "") {
-                    toast.error("Please fill all the fields");
-                    return;
-                  }
-
-                  scheduleForm.username = selectedChat.username;
-                  try {
-                    const { data } = await axios.post("/user/sendScheduleMeet", scheduleForm);
-                    toast.success("Request mail has been sent successfully!");
-                    setScheduleForm({
-                      date: "",
-                      time: "",
-                    });
-                  } catch (error) {
-                    console.log(error);
-                    if (error?.response?.data?.message) {
-                      toast.error(error.response.data.message);
-                      if (error.response.data.message === "Please Login") {
-                        localStorage.removeItem("userInfo");
-                        setUser(null);
-                        await axios.get("/auth/logout");
-                        navigate("/login");
-                      }
-                    } else {
-                      toast.error("Something went wrong");
-                    }
-                  }
-                  setScheduleModalShow(false);
-                }}
-              >
+              <Button variant="success" type="submit" onClick={handleScheduleSubmit}>
                 Submit
               </Button>
               <Button variant="danger" onClick={() => setScheduleModalShow(false)} style={{ marginLeft: "10px" }}>
