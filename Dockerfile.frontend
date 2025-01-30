@@ -1,31 +1,34 @@
-# Use an official Node.js runtime as a base image (npm is included in this image)
+# Use an official Node.js runtime as a base image
 FROM node:20
 
-# fetch the latest version of the package lists
+# Update apt-get (optional, only if you need OS packages)
 RUN apt-get update
 
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy the contents of the Frontend directory
-COPY Frontend/ /app/Frontend
+# Copy only package files first (better for caching)
+COPY Frontend/package*.json /app/Frontend/
 
 WORKDIR /app/Frontend
 
-# Remove node_modules and .env files from the Frontend directory if they exist
-RUN rm -rf node_modules .env
-
-# Install Node.js dependencies in the container app directory
+# Install Node.js dependencies
 RUN npm install
 
-ARG VITE_LOCALHOST
+# Copy the rest of the frontend code
+COPY Frontend/ /app/Frontend
 
-#write the environment variables to a .env file
-RUN echo "VITE_LOCALHOST=${VITE_LOCALHOST}" > .env
+# Build the frontend for production
+RUN npm run build
 
-RUN cat .env
+# Use an official Nginx image to serve the build output
+FROM nginx:alpine
 
-EXPOSE 5173
+# Copy the React build output to Nginx HTML folder
+COPY --from=0 /app/Frontend/dist /usr/share/nginx/html
 
-# Run the frontend development server
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+# Expose port 80 for the container
+EXPOSE 80
+
+# By default, Nginx runs on port 80
+CMD ["nginx", "-g", "daemon off;"]
