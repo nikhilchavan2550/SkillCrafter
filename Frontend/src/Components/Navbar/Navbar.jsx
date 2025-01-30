@@ -14,12 +14,18 @@ const UserProfileDropdown = () => {
   const { user, setUser } = useUser();
   const navigate = useNavigate();
 
+  // Get frontend URL dynamically
+  const FRONTEND_URL =
+    import.meta.env.MODE === "development"
+      ? "http://localhost:5173" // Localhost for development
+      : "https://skillcrafter.vercel.app"; // Vercel production domain
+
   const handleLogout = async () => {
     localStorage.removeItem("userInfo");
     setUser(null);
     try {
       await axios.get("/auth/logout");
-      window.location.href = "http://localhost:5173/login";
+      window.location.href = `${FRONTEND_URL}/login`; // Redirecting dynamically
     } catch (error) {
       console.log(error);
       if (error?.response?.data?.message) {
