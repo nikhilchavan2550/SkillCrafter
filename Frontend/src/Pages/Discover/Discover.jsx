@@ -7,6 +7,12 @@ import Spinner from "react-bootstrap/Spinner";
 import Nav from "react-bootstrap/Nav";
 import ProfileCard from "./ProfileCard";
 
+// 1) Define your environment-based backend URL
+const SERVER_URL =
+  import.meta.env.MODE === "development"
+    ? "http://localhost:8000"           // Local dev
+    : "https://skillcrafter.onrender.com"; // Render production
+
 const Discover = () => {
   const navigate = useNavigate();
   const { user, setUser } = useUser();
@@ -21,21 +27,23 @@ const Discover = () => {
     const getUser = async () => {
       try {
         setLoading(true);
-        const { data } = await axios.get(`/user/registered/getDetails`);
+        // 2) Use SERVER_URL for your GET request
+        const { data } = await axios.get(`${SERVER_URL}/user/registered/getDetails`);
         setUser(data.data);
         localStorage.setItem("userInfo", JSON.stringify(data.data));
       } catch (error) {
         toast.error(error.response?.data?.message || "An error occurred");
         localStorage.removeItem("userInfo");
         setUser(null);
-        await axios.get("/auth/logout");
+        // 3) Use SERVER_URL for logout
+        await axios.get(`${SERVER_URL}/auth/logout`);
         navigate("/login");
       }
     };
 
     const getDiscoverUsers = async () => {
       try {
-        const { data } = await axios.get("/user/discover");
+        const { data } = await axios.get(`${SERVER_URL}/user/discover`);
         setDiscoverUsers(data.data.forYou);
         setWebDevUsers(data.data.webDev);
         setMlUsers(data.data.ml);
@@ -44,7 +52,7 @@ const Discover = () => {
         toast.error(error.response?.data?.message || "An error occurred");
         localStorage.removeItem("userInfo");
         setUser(null);
-        await axios.get("/auth/logout");
+        await axios.get(`${SERVER_URL}/auth/logout`);
         navigate("/login");
       } finally {
         setLoading(false);
@@ -53,11 +61,12 @@ const Discover = () => {
 
     getUser();
     getDiscoverUsers();
-  }, []);
+  }, [navigate, setUser]);
 
+  // Styling
   const containerStyle = {
     display: "grid",
-    gridTemplateColumns: "1fr 4fr", // Sidebar (1fr) and content (4fr)
+    gridTemplateColumns: "1fr 4fr",
     gap: "20px",
     backgroundColor: "#000000", // Black background
     minHeight: "100vh",
@@ -106,6 +115,7 @@ const Discover = () => {
 
   return (
     <div style={containerStyle}>
+      {/* Sidebar Nav */}
       <div style={navBarStyle}>
         <Nav className="flex-column">
           <Nav.Link
@@ -150,6 +160,8 @@ const Discover = () => {
           </Nav.Link>
         </Nav>
       </div>
+
+      {/* Main Content */}
       <div className="content-container">
         {loading ? (
           <div className="container d-flex justify-content-center align-items-center" style={{ height: "50vh" }}>
@@ -162,14 +174,15 @@ const Discover = () => {
             </h1>
             <div style={profileCardsContainer}>
               {discoverUsers.length > 0 ? (
-                discoverUsers.map((user) => (
+                discoverUsers.map((u) => (
                   <ProfileCard
-                    profileImageUrl={user?.picture}
-                    name={user?.name}
-                    rating={user?.rating || 5}
-                    bio={user?.bio}
-                    skills={user?.skillsProficientAt}
-                    username={user?.username}
+                    key={u.username}
+                    profileImageUrl={u?.picture}
+                    name={u?.name}
+                    rating={u?.rating || 5}
+                    bio={u?.bio}
+                    skills={u?.skillsProficientAt}
+                    username={u?.username}
                   />
                 ))
               ) : (
@@ -180,19 +193,21 @@ const Discover = () => {
             <h1 id="popular" style={headingStyle}>
               Popular
             </h1>
+
             <h2 id="web-development" style={headingStyle}>
               Web Development
             </h2>
             <div style={profileCardsContainer}>
               {webDevUsers.length > 0 ? (
-                webDevUsers.map((user) => (
+                webDevUsers.map((u) => (
                   <ProfileCard
-                    profileImageUrl={user?.picture}
-                    name={user?.name}
+                    key={u.username}
+                    profileImageUrl={u?.picture}
+                    name={u?.name}
                     rating={4}
-                    bio={user?.bio}
-                    skills={user?.skillsProficientAt}
-                    username={user?.username}
+                    bio={u?.bio}
+                    skills={u?.skillsProficientAt}
+                    username={u?.username}
                   />
                 ))
               ) : (
@@ -205,14 +220,15 @@ const Discover = () => {
             </h2>
             <div style={profileCardsContainer}>
               {mlUsers.length > 0 ? (
-                mlUsers.map((user) => (
+                mlUsers.map((u) => (
                   <ProfileCard
-                    profileImageUrl={user?.picture}
-                    name={user?.name}
+                    key={u.username}
+                    profileImageUrl={u?.picture}
+                    name={u?.name}
                     rating={4}
-                    bio={user?.bio}
-                    skills={user?.skillsProficientAt}
-                    username={user?.username}
+                    bio={u?.bio}
+                    skills={u?.skillsProficientAt}
+                    username={u?.username}
                   />
                 ))
               ) : (
@@ -225,14 +241,15 @@ const Discover = () => {
             </h2>
             <div style={profileCardsContainer}>
               {otherUsers.length > 0 ? (
-                otherUsers.map((user) => (
+                otherUsers.map((u) => (
                   <ProfileCard
-                    profileImageUrl={user?.picture}
-                    name={user?.name}
+                    key={u.username}
+                    profileImageUrl={u?.picture}
+                    name={u?.name}
                     rating={4}
-                    bio={user?.bio}
-                    skills={user?.skillsProficientAt}
-                    username={user?.username}
+                    bio={u?.bio}
+                    skills={u?.skillsProficientAt}
+                    username={u?.username}
                   />
                 ))
               ) : (
