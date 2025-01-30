@@ -7,14 +7,15 @@ import { BrowserRouter as Router } from "react-router-dom";
 import axios from "axios";
 import { UserContextProvider } from "./util/UserContext.jsx";
 
-if (import.meta.env.DEV) {
-  console.log("Running in development mode");
-  axios.defaults.baseURL = import.meta.env.VITE_LOCALHOST;
-} else {
-  console.log("Running in production mode");
-  axios.defaults.baseURL = import.meta.env.VITE_SERVER_URL;
-}
+// Dynamically setting the backend URL based on environment
+axios.defaults.baseURL =
+  import.meta.env.MODE === "development"
+    ? "http://localhost:8000" // Local dev server
+    : import.meta.env.VITE_SERVER_URL || "https://skillcrafter.onrender.com"; // Production server
+
 axios.defaults.withCredentials = true;
+
+console.log("Backend API Base URL:", axios.defaults.baseURL);
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <Router>
