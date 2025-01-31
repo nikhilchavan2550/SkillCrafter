@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router-dom";
+import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import Footer from "./Components/Footer/Footer";
 import Discover from "./Pages/Discover/Discover";
 import Login from "./Pages/Login/Login";
@@ -18,7 +18,7 @@ import "react-toastify/dist/ReactToastify.css";
 
 const App = () => {
   return (
-    <>
+    <Router> {/* ✅ Add BrowserRouter */}
       <Header />
       <ToastContainer position="top-right" />
       <Routes>
@@ -36,9 +36,8 @@ const App = () => {
         <Route path="/rating/:username" element={<Rating />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
-
       <Footer />
-    </>
+    </Router>
   );
 };
 
