@@ -7,11 +7,8 @@ import Spinner from "react-bootstrap/Spinner";
 import Nav from "react-bootstrap/Nav";
 import ProfileCard from "./ProfileCard";
 
-// 1) Define your environment-based backend URL
-const SERVER_URL =
-  import.meta.env.MODE === "development"
-    ? "http://localhost:8000"           // Local dev
-    : "https://skillcrafter.onrender.com"; // Render production
+// ✅ Load from .env
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || "https://skillcrafter.onrender.com";
 
 const Discover = () => {
   const navigate = useNavigate();
@@ -27,23 +24,27 @@ const Discover = () => {
     const getUser = async () => {
       try {
         setLoading(true);
-        // 2) Use SERVER_URL for your GET request
-        const { data } = await axios.get(`${SERVER_URL}/user/registered/getDetails`);
+        const { data } = await axios.get(`${SERVER_URL}/user/registered/getDetails`, {
+          withCredentials: true, // 🔹 Ensure cookies (JWT) are sent
+          headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
+        });
         setUser(data.data);
         localStorage.setItem("userInfo", JSON.stringify(data.data));
       } catch (error) {
         toast.error(error.response?.data?.message || "An error occurred");
         localStorage.removeItem("userInfo");
         setUser(null);
-        // 3) Use SERVER_URL for logout
-        await axios.get(`${SERVER_URL}/auth/logout`);
+        await axios.get(`${SERVER_URL}/auth/logout`, { withCredentials: true });
         navigate("/login");
       }
     };
 
     const getDiscoverUsers = async () => {
       try {
-        const { data } = await axios.get(`${SERVER_URL}/user/discover`);
+        const { data } = await axios.get(`${SERVER_URL}/user/discover`, {
+          withCredentials: true, // ✅ Ensure authentication
+          headers: { Authorization: `Bearer ${localStorage.getItem("accessToken")}` }
+        });
         setDiscoverUsers(data.data.forYou);
         setWebDevUsers(data.data.webDev);
         setMlUsers(data.data.ml);
@@ -52,7 +53,7 @@ const Discover = () => {
         toast.error(error.response?.data?.message || "An error occurred");
         localStorage.removeItem("userInfo");
         setUser(null);
-        await axios.get(`${SERVER_URL}/auth/logout`);
+        await axios.get(`${SERVER_URL}/auth/logout`, { withCredentials: true });
         navigate("/login");
       } finally {
         setLoading(false);
@@ -63,6 +64,23 @@ const Discover = () => {
     getDiscoverUsers();
   }, [navigate, setUser]);
 
+  return (
+    <div>
+      {loading ? (
+        <Spinner animation="border" />
+      ) : (
+        <>
+          <h1>Discover Users</h1>
+          {discoverUsers.map((user) => (
+            <ProfileCard key={user.username} profileImageUrl={user.picture} name={user.name} />
+          ))}
+        </>
+      )}
+    </div>
+  );
+};
+
+export default Discover;
   // Styling
   const containerStyle = {
     display: "grid",
